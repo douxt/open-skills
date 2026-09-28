@@ -1,0 +1,35 @@
+name: mirror-to-gitee
+
+# GitHub 是唯一源；本 workflow 把仓精确镜像到 Gitee。
+# 单向设计：Gitee 侧永不被本地直接推，从结构上排除双 remote 分叉。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 推送到 Gitee 镜像
+        env:
+          GITEE_SSH_KEY: ${{ secrets.GITEE_SSH_KEY }}
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          printf '%s\n' "$GITEE_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 gitee.com >> ~/.ssh/known_hosts 2>/dev/null
+
+          # 🔴 必须先清掉 remote-tracking refs：`--mirror` 会连 refs/remotes/origin/*
+          # 一起推，Gitee 会拒（deny updating a hidden ref）并使 job 变红。
+          git for-each-ref --format='%(refname)' refs/remotes | while read -r r; do
+            git update-ref -d "$r"
+          done
+
+          git remote add gitee git@gitee.com:douxt/open-skills.git
+          git push --mirror gitee
