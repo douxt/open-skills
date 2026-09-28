@@ -23,13 +23,25 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$GITEE_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -t ed25519 gitee.com >> ~/.ssh/known_hosts 2>/dev/null
 
-          # 🔴 必须先清掉 remote-tracking refs：`--mirror` 会连 refs/remotes/origin/*
-          # 一起推，Gitee 会拒（deny updating a hidden ref）并使 job 变红。
+          echo "== 1) DNS 与 22 端口连通性 =="
+          getent hosts gitee.com || echo "  DNS 解析失败"
+          timeout 15 bash -c 'cat < /dev/null > /dev/tcp/gitee.com/22' && echo "  22 端口可达" || echo "  ⚠️ 22 端口不可达"
+
+          echo "== 2) 取 host key =="
+          timeout 20 ssh-keyscan -T 10 -t ed25519 gitee.com >> ~/.ssh/known_hosts || echo "  ⚠️ ssh-keyscan 失败 ($?)"
+          echo "  known_hosts 行数: $(wc -l < ~/.ssh/known_hosts)"
+
+          echo "== 3) SSH 认证 =="
+          timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 -T git@gitee.com || echo "  (非 0 属正常：gitee 不提供 shell)"
+
+          echo "== 4) 清 remote-tracking refs =="
+          # 🔴 `--mirror` 会连 refs/remotes/origin/* 一起推，Gitee 会拒
+          # （deny updating a hidden ref）并使 job 变红，故先清掉。
           git for-each-ref --format='%(refname)' refs/remotes | while read -r r; do
             git update-ref -d "$r"
           done
 
+          echo "== 5) mirror push =="
           git remote add gitee git@gitee.com:douxt/open-skills.git
           git push --mirror gitee
