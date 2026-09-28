@@ -42,6 +42,13 @@ python3 gale-research/tools/selftest.py
 
 ⚠️ 校验器只检查报告的**自洽性与声明完整性**，**不校验所报数字与 URL 是否真实** —— `exit 0` 不等于内容为真。
 
+## 镜像
+
+- **GitHub（主）**：<https://github.com/douxt/open-skills>
+- **Gitee（国内镜像）**：<https://gitee.com/douxt/open-skills>
+
+Gitee 侧由 GitHub Actions 自动镜像推送，**单向**。**Issue 与 PR 请提到 GitHub** —— Gitee 侧不接受任何提交。
+
 ## License
 
 [MIT](LICENSE)
