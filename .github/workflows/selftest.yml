@@ -1,0 +1,16 @@
+name: selftest
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gale-research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: gale-research 契约校验器回归测试
+        run: python3 gale-research/tools/selftest.py
